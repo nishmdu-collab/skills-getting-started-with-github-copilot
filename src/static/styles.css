@@ -100,6 +100,33 @@ section h3 {
   border-radius: 999px;
   font-size: 14px;
   border: 1px solid #c7d9ff;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.participant-email {
+  display: inline-block;
+}
+
+.participant-remove {
+  background: transparent;
+  border: none;
+  color: #c62828;
+  font-weight: bold;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  line-height: 18px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.participant-remove:hover {
+  background: rgba(198,40,40,0.08);
 }
 
 .no-participants {

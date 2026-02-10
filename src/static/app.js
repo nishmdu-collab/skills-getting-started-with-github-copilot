@@ -20,18 +20,19 @@ document.addEventListener("DOMContentLoaded", () => {
       Object.entries(activities).forEach(([name, details]) => {
         const activityCard = document.createElement("div");
         activityCard.className = "activity-card";
+        activityCard.dataset.activity = name;
 
         const spotsLeft = details.max_participants - details.participants.length;
 
         const participantsHtml = details.participants && details.participants.length
-          ? `<ul class="participants-list">${details.participants.map(p => `<li>${p}</li>`).join('')}</ul>`
+          ? `<ul class="participants-list">${details.participants.map(p => `<li data-email="${p}" class="participant-chip"><span class="participant-email">${p}</span><button class="participant-remove" aria-label="Remove ${p}">×</button></li>`).join('')}</ul>`
           : `<p class="no-participants">No participants yet</p>`;
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p><strong>Availability:</strong> <span class="spots-left">${spotsLeft}</span> spots left</p>
           <div class="participants">
             <strong>Participants:</strong>
             ${participantsHtml}
@@ -71,11 +72,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (response.ok) {
         messageDiv.textContent = result.message;
-        messageDiv.className = "success";
+        messageDiv.className = "message success";
         signupForm.reset();
+
+        // Refresh activities to show the newly added participant
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        messageDiv.className = "message error";
       }
 
       messageDiv.classList.remove("hidden");
@@ -89,6 +93,56 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.className = "error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
+    }
+  });
+
+  // Delegate click events for participant remove buttons
+  activitiesList.addEventListener('click', async (event) => {
+    const btn = event.target.closest('.participant-remove');
+    if (!btn) return;
+
+    const li = btn.closest('li');
+    if (!li) return;
+
+    const email = li.dataset.email;
+    const card = btn.closest('.activity-card');
+    const activityName = card && card.dataset.activity;
+    if (!email || !activityName) return;
+
+    if (!confirm(`Unregister ${email} from ${activityName}?`)) return;
+
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activityName)}/signup?email=${encodeURIComponent(email)}`,
+        { method: 'DELETE' }
+      );
+
+      const result = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        // Remove participant chip
+        li.remove();
+
+        // Update spots left
+        const spotsSpan = card.querySelector('.spots-left');
+        if (spotsSpan) {
+          const current = parseInt(spotsSpan.textContent, 10);
+          const next = Number.isNaN(current) ? 0 : current + 1;
+          spotsSpan.textContent = next;
+        }
+
+        // If no participants remain, show empty state
+        const ul = card.querySelector('.participants-list');
+        if (!ul || ul.children.length === 0) {
+          const participantsDiv = card.querySelector('.participants');
+          if (participantsDiv) participantsDiv.innerHTML = '<strong>Participants:</strong><p class="no-participants">No participants yet</p>';
+        }
+      } else {
+        alert(result.detail || 'Failed to remove participant');
+      }
+    } catch (error) {
+      console.error('Error removing participant:', error);
+      alert('Failed to remove participant. Please try again.');
     }
   });
 
